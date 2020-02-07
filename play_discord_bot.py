@@ -21,7 +21,7 @@ CHANNEL = 'active-investigations'
 
 # log setup
 syslog = SysLogHandler() # /var/log/syslog
-log_format = '%(asctime)s vast-ai dungeon_worker: %(message)s'
+log_format = '%(asctime)s atlas dungeon_worker: %(message)s'
 log_formatter = logging.Formatter(log_format, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(log_formatter)
 logger = logging.getLogger()
@@ -55,7 +55,7 @@ async def on_ready():
         # generate response
         try:
             async with client.get_channel(channel).typing():
-                task = loop.run_in_executor(None, story_manager.act, text))
+                task = loop.run_in_executor(None, story_manager.act, text)
                 response = await asyncio.wait_for(task, 60, loop=loop)
                 sent = f'> {args["text"]}\n{escape(response)}'
                 await client.get_channel(channel).send(sent)
@@ -95,7 +95,7 @@ async def game_save(ctx):
 
     id = story_manager.story.save_to_storage()
     await ctx.send("Game saved.")
-    await ctx.("To load the game, type 'load' and enter the following ID: {}".format(id))
+    await ctx.send("To load the game, type 'load' and enter the following ID: {}".format(id))
 
 @bot.command(name='load', help='Load the game with given ID')
 @commands.has_role('chief')
@@ -112,7 +112,7 @@ async def game_load(ctx, text='id'):
 async def game_exit(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
-        
+
     await game_save(ctx)
     await ctx.send("Exiting game...")
     exit()
@@ -123,5 +123,5 @@ async def game_exit(ctx):
 #     if isinstance(error, commands.errors.CommandNotFound): return
 
 if __name__ == '__main__':
-    client.run(os.getenv('DISCORD_TOKEN'))
     bot.run(os.getenv('DISCORD_TOKEN'))
+    client.run(os.getenv('DISCORD_TOKEN'))
