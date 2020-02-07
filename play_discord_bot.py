@@ -5,12 +5,14 @@ import sys
 import time
 
 import re, json, logging, asyncio, discord
-from generator.gpt2.gpt2_generator import *
 from logging.handlers import SysLogHandler
 
+from generator.gpt2.gpt2_generator import *
 from story import grammars
 from story.story_manager import *
 from story.utils import *
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # Discord
 from discord.ext import commands
@@ -29,7 +31,6 @@ logger.addHandler(syslog)
 logger.setLevel(logging.INFO)
 
 max_history = 20
-client = discord.Client()
 generator = GPT2Generator()
 story_manager = UnconstrainedStoryManager(generator)
 queue = asyncio.Queue()
@@ -41,7 +42,7 @@ def escape(text):
     return re.sub(r'(\*|_|`|~|\\|>)', r'\\\g<1>', text)
 
 
-@client.event
+@bot.event
 async def on_ready():
     loop = asyncio.get_event_loop()
 
@@ -54,11 +55,11 @@ async def on_ready():
 
         # generate response
         try:
-            async with client.get_channel(channel).typing():
+            async with bot.get_channel(channel).typing():
                 task = loop.run_in_executor(None, story_manager.act, text)
                 response = await asyncio.wait_for(task, 60, loop=loop)
                 sent = f'> {args["text"]}\n{escape(response)}'
-                await client.get_channel(channel).send(sent)
+                await bot.get_channel(channel).send(sent)
         except Exception:
             logger.info('Error with message: ', exc_info=True)
 
@@ -67,9 +68,7 @@ async def on_ready():
 async def game_next(ctx, *, text='continue'):
     if ctx.message.channel.name != CHANNEL:
         return
-
     message = {'channel': ctx.channel.id, 'text': text}
-    bot.stop_time = bot.loop.time() + timeout
     await queue.put(json.dumps(message))
 
 @bot.command(name='restart', help='Starts the game from beginning')
@@ -108,7 +107,7 @@ async def game_load(ctx, text='id'):
     await ctx.send(result)
 
 @bot.command(name='exit', help='Saves and exits the current game')
-@commands.has_role('chief')
+@commands.has_role('Chief')
 async def game_exit(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -117,11 +116,14 @@ async def game_exit(ctx):
     await ctx.send("Exiting game...")
     exit()
 
-# TODO handle errors
-# @bot.event
-# async def on_command_error(ctx, error):
-#     if isinstance(error, commands.errors.CommandNotFound): return
+
+ @bot.event
+ async def on_command_error(ctx, error):
+     if isinstance(error, commands.errors.CommandNotFound): return
+     # TODO handle errors
+     print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     bot.run(os.getenv('DISCORD_TOKEN'))
-    client.run(os.getenv('DISCORD_TOKEN'))
