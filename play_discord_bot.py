@@ -95,6 +95,7 @@ async def game_revert(ctx):
         await ctx.send(story_manager.story.story_start)
 
 @bot.command(name='restart', help='Starts the game from beginning')
+@commands.has_role('Chief')
 async def game_restart(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -111,6 +112,7 @@ async def game_restart(ctx):
     await ctx.send(story_manager.story.story_start)
 
 @bot.command(name='save', help='Saves the current game')
+@commands.has_role('Chief')
 async def game_save(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -120,7 +122,7 @@ async def game_save(ctx):
     await ctx.send("To load the game, type 'load' and enter the following ID: {}".format(id))
 
 @bot.command(name='load', help='Load the game with given ID')
-@commands.has_role('chief')
+@commands.has_role('Chief')
 async def game_load(ctx, text='id'):
     if ctx.message.channel.name != CHANNEL:
         return
