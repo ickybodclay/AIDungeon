@@ -86,7 +86,7 @@ async def game_next(ctx, *, text='continue'):
     await queue.put(json.dumps(message))
 
 @bot.command(name='revert', help='Reverts the previous action')
-async def game_revert(ctx, *, text='revert'):
+async def game_revert(ctx):
     if len(story_manager.story.actions) == 0:
         await ctx.send("You can't go back any farther. ")
         return
