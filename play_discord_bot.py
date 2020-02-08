@@ -81,6 +81,7 @@ async def game_next(ctx, *, text='continue'):
     message = {'channel': ctx.channel.id, 'text': text}
     await queue.put(json.dumps(message))
 
+
 @bot.command(name='revert', help='Reverts the previous action')
 async def game_revert(ctx):
     if len(story_manager.story.actions) == 0:
@@ -93,6 +94,7 @@ async def game_revert(ctx):
         await ctx.send(story_manager.story.results[-1])
     else:
         await ctx.send(story_manager.story.story_start)
+
 
 @bot.command(name='restart', help='Starts the game from beginning')
 @commands.has_role('Chief')
@@ -111,6 +113,7 @@ async def game_restart(ctx):
     await ctx.send('Restarted game from beginning')
     await ctx.send(story_manager.story.story_start)
 
+
 @bot.command(name='save', help='Saves the current game')
 @commands.has_role('Chief')
 async def game_save(ctx):
@@ -121,6 +124,7 @@ async def game_save(ctx):
     await ctx.send("Game saved.")
     await ctx.send("To load the game, type 'load' and enter the following ID: {}".format(id))
 
+
 @bot.command(name='load', help='Load the game with given ID')
 @commands.has_role('Chief')
 async def game_load(ctx, text='id'):
@@ -130,6 +134,7 @@ async def game_load(ctx, text='id'):
     result = story_manager.story.load_from_storage(text)
     await ctx.send("\nLoading Game...\n")
     await ctx.send(result)
+
 
 @bot.command(name='exit', help='Saves and exits the current game')
 @commands.has_role('Chief')
