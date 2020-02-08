@@ -102,6 +102,10 @@ async def game_restart(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
 
+    if story_manager.story == None:
+        await ctx.send('No story found to restart, load a story with !load story_id or start a new one with !next')
+        return
+
     # clear queue
     while not queue.empty():
         await queue.get()
@@ -120,6 +124,9 @@ async def game_save(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
 
+    if story_manager.story == None or not story_manager.story.upload_story:
+        return
+
     id = story_manager.story.save_to_storage()
     await ctx.send("Game saved.")
     await ctx.send("To load the game, type 'load' and enter the following ID: {}".format(id))
@@ -127,9 +134,12 @@ async def game_save(ctx):
 
 @bot.command(name='load', help='Load the game with given ID')
 @commands.has_role('Chief')
-async def game_load(ctx, text='id'):
+async def game_load(ctx, *, text='save_game_id'):
     if ctx.message.channel.name != CHANNEL:
         return
+    
+    if story_manager.story == None:
+        story_manager.story = Story("", upload_story=True)
 
     result = story_manager.story.load_from_storage(text)
     await ctx.send("\nLoading Game...\n")
@@ -141,6 +151,9 @@ async def game_load(ctx, text='id'):
 async def game_exit(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
+
+    if story_manager.story == None:
+        story_manager.story = Story("", upload_story=False)
 
     await game_save(ctx)
     await ctx.send("Exiting game...")
