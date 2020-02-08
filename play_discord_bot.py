@@ -35,6 +35,7 @@ generator = GPT2Generator()
 story_manager = UnconstrainedStoryManager(generator)
 queue = asyncio.Queue()
 logger.info('Worker instance started')
+print('Worker instance started\n', file=sys.stderr)
 
 
 def escape(text):
@@ -51,17 +52,19 @@ async def on_ready():
         msg = None
         while not msg: msg = await queue.get()
         logger.info(f'Processing message: {msg}'); args = json.loads(msg)
+        print(f'message seen: {msg}\n', file=sys.stderr)
         channel, text = args['channel'], f'\n> {args["text"]}\n'
 
         # generate response
         try:
             async with bot.get_channel(channel).typing():
                 task = loop.run_in_executor(None, story_manager.act, text)
-                response = await asyncio.wait_for(task, 60, loop=loop)
-                print(response + "\n")
+                response = await asyncio.wait_for(task, 180, loop=loop)
+                print(response + "\n", file=sys.stderr)
                 sent = f'> {args["text"]}\n{escape(response)}'
                 await bot.get_channel(channel).send(sent)
-        except Exception:
+        except Exception as err:
+            print('Exception in response handling:', err, file=sys.stderr)
             logger.info('Error with message: ', exc_info=True)
 
 
