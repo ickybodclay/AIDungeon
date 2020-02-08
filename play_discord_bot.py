@@ -112,7 +112,27 @@ async def game_revert(ctx):
         await ctx.send(story_manager.story.story_start)
 
 
-@bot.command(name='restart', help='Starts the game from beginning')
+@bot.command(name='newgame', help='Starts a new game')
+@commands.has_role(ADMIN_ROLE)
+async def game_newgame(ctx):
+    if ctx.message.channel.name != CHANNEL:
+        return
+
+    if story_manager.story == None:
+        await ctx.send('Load a story with !load story_id or start a new one with !next')
+        return
+
+    # clear queue
+    while not queue.empty():
+        await queue.get()
+    await queue.join()
+
+    story_manager.story = None
+    
+    await ctx.send('\n==========\nNew game\n==========\nProvide intial prompt with !next')
+
+
+@bot.command(name='restart', help='Restarts the game from initial prompt')
 @commands.has_role(ADMIN_ROLE)
 async def game_restart(ctx):
     if ctx.message.channel.name != CHANNEL:
