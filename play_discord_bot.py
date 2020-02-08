@@ -22,7 +22,7 @@ bot = commands.Bot(command_prefix='!')
 CHANNEL = 'active-investigations'
 
 # log setup
-syslog = SysLogHandler() # /var/log/syslog
+syslog = SysLogHandler() # sudo service rsyslog start && tail -f /var/log/syslog
 log_format = '%(asctime)s atlas dungeon_worker: %(message)s'
 log_formatter = logging.Formatter(log_format, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(log_formatter)
@@ -46,6 +46,10 @@ def escape(text):
 @bot.event
 async def on_ready():
     loop = asyncio.get_event_loop()
+    
+    upload_story = True
+    if story_manager.story != None:
+            story_manager.story = None
 
     while True:
         # poll queue for messages, block here if empty
@@ -55,10 +59,16 @@ async def on_ready():
         print(f'message seen: {msg}\n', file=sys.stderr)
         channel, text = args['channel'], f'\n> {args["text"]}\n'
 
+        if story_manager.story is None:
+            await bot.get_channel(channel).send("Generating story...")
+            result = story_manager.start_new_story(args["text"], context="", upload_story=upload_story)
+            await bot.get_channel(channel).send(result)
+            continue
+
         # generate response
         try:
             async with bot.get_channel(channel).typing():
-                task = loop.run_in_executor(None, story_manager.act, text)
+                task = loop.run_in_executor(None, story_manager.act, args["text"])
                 response = await asyncio.wait_for(task, 180, loop=loop)
                 print(response + "\n", file=sys.stderr)
                 sent = f'> {args["text"]}\n{escape(response)}'
@@ -74,6 +84,19 @@ async def game_next(ctx, *, text='continue'):
         return
     message = {'channel': ctx.channel.id, 'text': text}
     await queue.put(json.dumps(message))
+
+@bot.command(name='revert', help='Reverts the previous action')
+async def game_revert(ctx, *, text='revert'):
+    if len(story_manager.story.actions) == 0:
+        await ctx.send("You can't go back any farther. ")
+        return
+    story_manager.story.actions = story_manager.story.actions[:-1]
+    story_manager.story.results = story_manager.story.results[:-1]
+    await ctx.send("Last action reverted. ")
+    if len(story_manager.story.results) > 0:
+        await ctx.send(story_manager.story.results[-1])
+    else:
+        await ctx.send(story_manager.story.story_start)
 
 @bot.command(name='restart', help='Starts the game from beginning')
 async def game_restart(ctx):
