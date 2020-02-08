@@ -32,6 +32,7 @@ logger.setLevel(logging.INFO)
 
 max_history = 20
 generator = GPT2Generator()
+generator.censor = False
 story_manager = UnconstrainedStoryManager(generator)
 queue = asyncio.Queue()
 logger.info('Worker instance started')
@@ -78,7 +79,21 @@ async def on_ready():
 async def game_next(ctx, *, text='continue'):
     if ctx.message.channel.name != CHANNEL:
         return
-    message = {'channel': ctx.channel.id, 'text': text}
+
+    action = text
+    if action[0] == '"':
+        action = "You say " + action
+    else:
+        action = action.strip()
+        if "you" not in action[:6].lower() and "I" not in action[:6]:
+            action = action[0].lower() + action[1:]
+            action = "You " + action
+        if action[-1] not in [".", "?", "!"]:
+            action = action + "."
+        action = first_to_second_person(action)
+        action = "\n> " + action + "\n"
+
+    message = {'channel': ctx.channel.id, 'text': action}
     await queue.put(json.dumps(message))
 
 
