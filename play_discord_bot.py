@@ -35,7 +35,6 @@ generator = GPT2Generator()
 story_manager = UnconstrainedStoryManager(generator)
 queue = asyncio.Queue()
 logger.info('Worker instance started')
-print('Worker instance started\n', file=sys.stderr)
 
 
 def escape(text):
@@ -56,7 +55,6 @@ async def on_ready():
         msg = None
         while not msg: msg = await queue.get()
         logger.info(f'Processing message: {msg}'); args = json.loads(msg)
-        print(f'message seen: {msg}\n', file=sys.stderr)
         channel, text = args['channel'], f'\n> {args["text"]}\n'
 
         if story_manager.story is None:
@@ -70,11 +68,9 @@ async def on_ready():
             async with bot.get_channel(channel).typing():
                 task = loop.run_in_executor(None, story_manager.act, args["text"])
                 response = await asyncio.wait_for(task, 180, loop=loop)
-                print(response + "\n", file=sys.stderr)
                 sent = f'> {args["text"]}\n{escape(response)}'
                 await bot.get_channel(channel).send(sent)
         except Exception as err:
-            print('Exception in response handling:', err, file=sys.stderr)
             logger.info('Error with message: ', exc_info=True)
 
 
@@ -147,8 +143,8 @@ async def game_exit(ctx):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandNotFound): return
+    logger.error('Ignoring exception in command {}:'.format(ctx.command))
     # TODO handle errors
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
 
 
 if __name__ == '__main__':
