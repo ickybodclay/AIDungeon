@@ -20,17 +20,17 @@ from discord.ext import commands
 # bot setup
 bot = commands.Bot(command_prefix='!')
 CHANNEL = 'active-investigations'
+ADMIN_ROLE = 'Chief'
 
 # log setup
 syslog = SysLogHandler() # sudo service rsyslog start && tail -f /var/log/syslog
-log_format = '%(asctime)s atlas dungeon_worker: %(message)s'
+log_format = '%(asctime)s local dungeon_worker: %(message)s'
 log_formatter = logging.Formatter(log_format, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.addHandler(syslog)
 logger.setLevel(logging.INFO)
 
-max_history = 20
 generator = GPT2Generator()
 generator.censor = False
 story_manager = UnconstrainedStoryManager(generator)
@@ -45,6 +45,7 @@ def escape(text):
 
 @bot.event
 async def on_ready():
+    logger.info('Bot is ready')
     loop = asyncio.get_event_loop()
     
     upload_story = True
@@ -112,7 +113,7 @@ async def game_revert(ctx):
 
 
 @bot.command(name='restart', help='Starts the game from beginning')
-@commands.has_role('Chief')
+@commands.has_role(ADMIN_ROLE)
 async def game_restart(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -134,7 +135,7 @@ async def game_restart(ctx):
 
 
 @bot.command(name='save', help='Saves the current game')
-@commands.has_role('Chief')
+@commands.has_role(ADMIN_ROLE)
 async def game_save(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -148,7 +149,7 @@ async def game_save(ctx):
 
 
 @bot.command(name='load', help='Load the game with given ID')
-@commands.has_role('Chief')
+@commands.has_role(ADMIN_ROLE)
 async def game_load(ctx, *, text='save_game_id'):
     if ctx.message.channel.name != CHANNEL:
         return
@@ -162,7 +163,7 @@ async def game_load(ctx, *, text='save_game_id'):
 
 
 @bot.command(name='exit', help='Saves and exits the current game')
-@commands.has_role('Chief')
+@commands.has_role(ADMIN_ROLE)
 async def game_exit(ctx):
     if ctx.message.channel.name != CHANNEL:
         return
