@@ -213,6 +213,12 @@ async def game_exit(ctx):
 
     await game_save(ctx)
     await ctx.send("Exiting game...")
+
+    guild = ctx.message.guild
+    voice_client = guild.voice_client
+    if voice_client is not None:
+        voice_client.disconnect()
+
     exit()
 
 @bot.command(name='join', help='Join the voice channel of the user')
@@ -235,18 +241,6 @@ async def leave_voice(ctx):
         await ctx.send("You are not currently in a voice channel")
     else:
         await voice_client.disconnect()
-
-@bot.command(name='play-test', help='Play test audio')
-@commands.has_role(ADMIN_ROLE)
-async def play_message(ctx):
-    guild = ctx.message.guild
-    voice_client = guild.voice_client
-
-    if voice_client is not None:
-        source = await discord.FFmpegOpusAudio.from_probe("tmp/hello.mp3")
-        voice_client.play(source)
-    else:
-        await ctx.send("Bot is not connected to voice client, please !join first")
 
 @bot.event
 async def on_command_error(ctx, error):
