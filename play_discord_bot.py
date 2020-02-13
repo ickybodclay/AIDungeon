@@ -66,6 +66,14 @@ async def on_ready():
         guild = ai_channel.guild
         voice_client = guild.voice_client
 
+        if voice_client is not None and not voice_client.is_connected():
+            logger.info('original voice client disconnected, finding new client...')
+            for vc in guild.voice_clients:
+                if vc.is_connected():
+                    logger.info('new voice client found!')
+                    voice_client = vc
+                    break
+
         if story_manager.story is None:
             await ai_channel.send("Generating story...")
             result = story_manager.start_new_story(args["text"], context="", upload_story=upload_story)
@@ -217,7 +225,9 @@ async def game_exit(ctx):
     guild = ctx.message.guild
     voice_client = guild.voice_client
     if voice_client is not None:
-        voice_client.disconnect()
+        for vc in guild.voice_clients:
+            if vc.is_connected():
+                await voice_client.disconnect()
 
     exit()
 
@@ -237,10 +247,13 @@ async def leave_voice(ctx):
     guild = ctx.message.guild
     voice_client = guild.voice_client
 
-    if voice_client == None:
+    if voice_client is None:
         await ctx.send("You are not currently in a voice channel")
     else:
-        await voice_client.disconnect()
+        for vc in guild.voice_clients:
+            if vc.is_connected():
+                await voice_client.disconnect()
+
 
 @bot.event
 async def on_command_error(ctx, error):
