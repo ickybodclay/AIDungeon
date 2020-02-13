@@ -17,6 +17,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # Discord
 from discord.ext import commands
 
+# gTTS
+from gtts import gTTS
+
 # bot setup
 bot = commands.Bot(command_prefix='!')
 CHANNEL = 'active-investigations'
@@ -195,10 +198,43 @@ async def game_exit(ctx):
     await ctx.send("Exiting game...")
     exit()
 
+@bot.command(name='join', help='Join the voice channel of the user')
+@commands.has_role(ADMIN_ROLE)
+async def join_voice(ctx):
+    voice_channel = ctx.message.author.voice.channel
+
+    if voice_channel == None:
+        await ctx.send("You are not currently in a voice channel")
+    else:
+        await voice_channel.connect()
+
+@bot.command(name='leave', help='Join the voice channel of the user')
+@commands.has_role(ADMIN_ROLE)
+async def leave_voice(ctx):
+    guild = ctx.message.guild
+    voice_client = guild.voice_client
+
+    if voice_client == None:
+        await ctx.send("You are not currently in a voice channel")
+    else:
+        await voice_client.disconnect()
+
+@bot.command(name='play-test', help='Play test audio')
+@commands.has_role(ADMIN_ROLE)
+async def play_message(ctx):
+    guild = ctx.message.guild
+    voice_client = guild.voice_client
+
+    if voice_client is not None:
+        source = await discord.FFmpegOpusAudio.from_probe("tmp/hello.mp3")
+        voice_client.play(source)
+    else:
+        await ctx.send("Bot is not connected to voice client, please !join first")
 
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandNotFound): return
+    logger.error(error)
     logger.error('Ignoring exception in command {}:'.format(ctx.command))
     # TODO handle errors
 
