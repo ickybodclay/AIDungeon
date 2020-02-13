@@ -26,7 +26,7 @@ CHANNEL = 'active-investigations'
 ADMIN_ROLE = 'Chief'
 
 # log setup
-syslog = SysLogHandler() # sudo service rsyslog start && tail -f /var/log/syslog
+syslog = SysLogHandler() # sudo service rsyslog start && less +F /var/log/syslog
 log_format = '%(asctime)s local dungeon_worker: %(message)s'
 log_formatter = logging.Formatter(log_format, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(log_formatter)
@@ -96,8 +96,12 @@ async def on_ready():
 async def bot_read_message(voice_client, message):
     filename = 'tmp/message.mp3'
     await create_tts_mp3(filename, message)
-    source = await discord.FFmpegOpusAudio.from_probe(filename)
+    source = await discord.FFmpegOpusAudio.from_probe(filename, method=gtts_probe)
     voice_client.play(source)
+
+# hack to speed up playback by hardcoding the only codec/bitrate gtts provides
+def gtts_probe(source, executable):
+    return "mp3", "512"
 
 async def create_tts_mp3(filename, message):
     tts = gTTS(message, lang='en')
