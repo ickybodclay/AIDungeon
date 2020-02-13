@@ -86,11 +86,10 @@ async def on_ready():
                 task = loop.run_in_executor(None, story_manager.act, args["text"])
                 response = await asyncio.wait_for(task, 180, loop=loop)
                 sent = f'> {args["text"]}\n{escape(response)}'
-                await ai_channel.send(sent)
-
                 # handle tts if in a voice channel
-                if voice_client is not None:
+                if voice_client is not None and voice_client.is_connected():
                     await bot_read_message(voice_client, escape(response))
+                await ai_channel.send(sent)
         except Exception as err:
             logger.info('Error with message: ', exc_info=True)
 
@@ -225,9 +224,12 @@ async def game_exit(ctx):
     guild = ctx.message.guild
     voice_client = guild.voice_client
     if voice_client is not None:
-        for vc in guild.voice_clients:
-            if vc.is_connected():
-                await voice_client.disconnect()
+        if voice_client.is_connected():
+            await voice_client.disconnect()
+        else:
+            for vc in guild.voice_clients:
+                if vc.is_connected():
+                    await voice_client.disconnect()
 
     exit()
 
@@ -250,9 +252,12 @@ async def leave_voice(ctx):
     if voice_client is None:
         await ctx.send("You are not currently in a voice channel")
     else:
-        for vc in guild.voice_clients:
-            if vc.is_connected():
-                await voice_client.disconnect()
+        if voice_client.is_connected():
+            await voice_client.disconnect()
+        else:
+            for vc in guild.voice_clients:
+                if vc.is_connected():
+                    await voice_client.disconnect()
 
 
 @bot.event
