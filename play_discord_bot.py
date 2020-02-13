@@ -48,6 +48,7 @@ def escape(text):
 
 @bot.event
 async def on_ready():
+    print("Bot is ready\n")
     logger.info('Bot is ready')
     loop = asyncio.get_event_loop()
     
@@ -61,23 +62,39 @@ async def on_ready():
         while not msg: msg = await queue.get()
         logger.info(f'Processing message: {msg}'); args = json.loads(msg)
         channel, text = args['channel'], f'\n> {args["text"]}\n'
+        ai_channel = bot.get_channel(channel)
+        guild = ai_channel.guild
+        voice_client = guild.voice_client
 
         if story_manager.story is None:
-            await bot.get_channel(channel).send("Generating story...")
+            await ai_channel.send("Generating story...")
             result = story_manager.start_new_story(args["text"], context="", upload_story=upload_story)
-            await bot.get_channel(channel).send(result)
+            await ai_channel.send(result)
             continue
 
         # generate response
         try:
-            async with bot.get_channel(channel).typing():
+            async with ai_channel.typing():
                 task = loop.run_in_executor(None, story_manager.act, args["text"])
                 response = await asyncio.wait_for(task, 180, loop=loop)
                 sent = f'> {args["text"]}\n{escape(response)}'
-                await bot.get_channel(channel).send(sent)
+                await ai_channel.send(sent)
+
+                # handle tts if in a voice channel
+                if voice_client is not None:
+                    await bot_read_message(voice_client, escape(response))
         except Exception as err:
             logger.info('Error with message: ', exc_info=True)
 
+async def bot_read_message(voice_client, message):
+    filename = 'tmp/message.mp3'
+    await create_tts_mp3(filename, message)
+    source = await discord.FFmpegOpusAudio.from_probe(filename)
+    voice_client.play(source)
+
+async def create_tts_mp3(filename, message):
+    tts = gTTS(message, lang='en')
+    tts.save(filename)
 
 @bot.command(name='next', help='Continues AI Dungeon game')
 async def game_next(ctx, *, text='continue'):
