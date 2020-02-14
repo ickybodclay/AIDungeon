@@ -24,6 +24,11 @@ from gtts import gTTS
 bot = commands.Bot(command_prefix='!')
 CHANNEL = 'active-investigations'
 ADMIN_ROLE = 'Chief'
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+
+if DISCORD_TOKEN is None:
+    print('Error: DISCORD_TOKEN is not set')
+    exit(-1)
 
 # log setup
 syslog = SysLogHandler() # sudo service rsyslog start && less +F /var/log/syslog
@@ -74,36 +79,39 @@ async def on_ready():
                     voice_client = vc
                     break
 
-        if story_manager.story is None:
-            await ai_channel.send("Generating story...")
-            result = story_manager.start_new_story(args["text"], context="", upload_story=upload_story)
-            await ai_channel.send(result)
-            continue
-
         # generate response
         try:
             async with ai_channel.typing():
-                task = loop.run_in_executor(None, story_manager.act, args["text"])
-                response = await asyncio.wait_for(task, 180, loop=loop)
-                sent = f'> {args["text"]}\n{escape(response)}'
+                response = ""
+                sent = ""
+                if story_manager.story is None:
+                    await ai_channel.send("Generating story...")
+                    task = loop.run_in_executor(None, story_manager.start_new_story, args["text"], "", upload_story)
+                    response = await asyncio.wait_for(task, 180, loop=loop)
+                    response = response[response.index('\n', 3):]
+                    sent = escape(response)
+                else:
+                    task = loop.run_in_executor(None, story_manager.act, args["text"])
+                    response = await asyncio.wait_for(task, 180, loop=loop)
+                    sent = escape(response)
                 # handle tts if in a voice channel
                 if voice_client is not None and voice_client.is_connected():
-                    await bot_read_message(voice_client, escape(response))
+                    await bot_read_message(voice_client, sent)
                 await ai_channel.send(sent)
         except Exception as err:
             logger.info('Error with message: ', exc_info=True)
 
 async def bot_read_message(voice_client, message):
     filename = 'tmp/message.mp3'
-    await create_tts_mp3(filename, message)
-    source = await discord.FFmpegOpusAudio.from_probe(filename, method=gtts_probe)
-    voice_client.play(source)
+    await bot.loop.run_in_executor(None, create_tts_mp3, filename, message)
+    voice_client.play(discord.FFmpegPCMAudio(filename))
+    voice_client.source = discord.PCMVolumeTransformer(voice_client.source)
+    voice_client.source.volume = 1
+    # while voice_client.is_playing():
+    #     await asyncio.sleep(1)
+    # voice_client.stop() 
 
-# hack to speed up playback by hardcoding the only codec/bitrate gtts provides
-def gtts_probe(source, executable):
-    return "mp3", "512"
-
-async def create_tts_mp3(filename, message):
+def create_tts_mp3(filename, message):
     tts = gTTS(message, lang='en')
     tts.save(filename)
 
@@ -274,4 +282,4 @@ async def on_command_error(ctx, error):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    bot.run(os.getenv('DISCORD_TOKEN'))
+    bot.run(DISCORD_TOKEN)
