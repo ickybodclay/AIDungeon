@@ -32,6 +32,8 @@ if DISCORD_TOKEN is None:
 
 # log setup
 syslog = SysLogHandler() # sudo service rsyslog start && less +F /var/log/syslog
+# log_host, log_port = os.getenv('LOG_URL').rsplit(':', 1)
+# syslog = SysLogHandler(address=(log_host, int(log_port)))
 log_format = '%(asctime)s local dungeon_worker: %(message)s'
 log_formatter = logging.Formatter(log_format, datefmt='%b %d %H:%M:%S')
 syslog.setFormatter(log_formatter)
@@ -96,14 +98,15 @@ async def on_ready():
                     sent = escape(response)
                 # handle tts if in a voice channel
                 if voice_client is not None and voice_client.is_connected():
-                    await bot_read_message(voice_client, sent)
+                    await bot_read_message(loop, voice_client, sent)
                 await ai_channel.send(sent)
         except Exception as err:
             logger.info('Error with message: ', exc_info=True)
 
-async def bot_read_message(voice_client, message):
+async def bot_read_message(loop, voice_client, message):
     filename = 'tmp/message.mp3'
-    await bot.loop.run_in_executor(None, create_tts_mp3, filename, message)
+    tts_task = loop.run_in_executor(None, create_tts_mp3, filename, message)
+    await asyncio.wait_for(tts_task, 60, loop=loop)
     voice_client.play(discord.FFmpegPCMAudio(filename))
     voice_client.source = discord.PCMVolumeTransformer(voice_client.source)
     voice_client.source.volume = 1
